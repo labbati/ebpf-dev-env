@@ -13,4 +13,4 @@ services:
     ports:
       - 9090:9090
     volumes:
-      - ./:/workspaces/learning-vscode-containers
+      - ./:/workspaces/learning-ebpf-bcc
