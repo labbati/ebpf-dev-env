@@ -1,53 +1,59 @@
-FROM ubuntu:24.04
+FROM ubuntu:22.04
 
 RUN apt update
 
 RUN apt install -y \
+    bison \
     build-essential \
+    cmake \
     curl \
+    git \
+    kmod \
+    libclang-14-dev \
+    libedit-dev \
+    libelf-dev \
+    libfl-dev \
+    libllvm14 \
+    linux-generic \
+    # this is a trick as we cannot find linux kernel headers for 6.6.16
+    linux-headers-6.5.0-35-generic \
+    llvm-14-dev \
+    lsb-release \
     python3 \
+    python3-distutils \
     python3-pip \
-    vim \
+    python3-setuptools \
+    python-is-python3 \
     strace \
-    wget
+    vim \
+    wget \
+    zip \
+    zlib1g-dev
 
-# WORKDIR /tmp
-# ENV kernel_version=6.6.16
-# RUN wget "https://cdn.kernel.org/pub/linux/kernel/v6.x/linux-${kernel_version}.tar.xz"
-# RUN tar -xf "linux-${kernel_version}.tar.xz"
+# Trick to have linx headers work quickly....TODO replace with actual build from the kernel with the proper version
+RUN ln -s /lib/modules/6.5.0-35-generic/ /lib/modules/6.6.16-linuxkit
 
-# RUN apt install -y bison libelf-dev libdw-dev python3
-# RUN apt install -y flex
-# RUN apt install -y python-dev-is-python3
-# RUN apt install -y python3
-# RUN apt install -y libpfm4-dev
-# RUN apt install -y libcap-dev
-# RUN apt install -y libunwind-dev
-# RUN apt install -y libcrypto++-dev
-# RUN apt install -y git
-
+# Install Go
 WORKDIR /tmp
 ENV go_version=1.22.3
 RUN wget "https://go.dev/dl/go${go_version}.linux-arm64.tar.gz"
 RUN tar -C /usr/local -xzf "go${go_version}.linux-arm64.tar.gz"
 ENV PATH="${PATH}:/usr/local/go/bin"
 
-# # libtraceevent
-# WORKDIR /tmp
-# RUN git clone https://git.kernel.org/pub/scm/libs/libtrace/libtraceevent.git
-# WORKDIR /tmp/libtraceevent
-# RUN make
-# RUN make install
-# RUN cp -R /usr/local/lib64/* /usr/local/lib/
-# # RUN echo "/usr/local/lib64" > /etc/ld.so.conf.d/lib64.conf
-# # RUN ldconfig
+# Install BCC
+ARG BCC_VERSION=v0.30.0
+WORKDIR /opt
+RUN git clone https://github.com/iovisor/bcc.git --branch "${BCC_VERSION}" --depth 1
+RUN mkdir bcc/build
+WORKDIR /opt/bcc/build
+RUN cmake ..
+RUN make
+RUN make install
+# ... build python3 binding
+RUN cmake -DPYTHON_CMD=python3 ..
+WORKDIR /opt/bcc/build/src/python/
+RUN make
+RUN make install
 
-# RUN apt install -y vim
-# RUN apt install -y strace
-
-# WORKDIR /tmp/linux-${kernel_version}/tools/perf
-# RUN make install
-# RUN mv perf /usr/local/bin/perf
-
-# WORKDIR /workspace
+WORKDIR /root
 CMD ["sleep", "infinity"]

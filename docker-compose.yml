@@ -1,13 +1,16 @@
-version : '3.1'
+version: '3.1'
 
 services:
 
   ebpf:
     image: ebpf-dev
+    privileged: true
     cap_add:
       - SYS_PTRACE
     build:
       context: .
       dockerfile: Dockerfile.ebpf
+    ports:
+      - 9090:9090
     volumes:
       - ./:/workspaces/learning-vscode-containers
