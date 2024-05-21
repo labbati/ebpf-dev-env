@@ -1,4 +1,6 @@
-To be run in the docker environement:
+> TESTED ON MAC M1 Max only
+
+To be run in the docker environment:
 
 ```
 docker compose build
