@@ -45,6 +45,9 @@ ADD ./ /workspaces/learning-ebpf-bcc/
 WORKDIR /workspaces/learning-ebpf-bcc
 
 # Install BCC
+ARG bcc_version=v0.30.0
+WORKDIR /workspaces/learning-ebpf-bcc/bcc
+RUN git checkout "${bcc_version}"
 RUN mkdir -p bcc/build
 WORKDIR /workspaces/learning-ebpf-bcc/bcc/build
 RUN cmake ..
