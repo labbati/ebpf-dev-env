@@ -40,10 +40,10 @@ func computeE(iterations int64) float64 {
 func main() {
 	addr := ":9090"
 	http.HandleFunc("/e", func(w http.ResponseWriter, r *http.Request) {
-		if r.Method != http.MethodGet {
-			w.WriteHeader(http.StatusMethodNotAllowed)
-			return
-		}
+		// if r.Method != http.MethodGet {
+		// 	w.WriteHeader(http.StatusMethodNotAllowed)
+		// 	return
+		// }
 		iters := int64(100)
 		keys, ok := r.URL.Query()["iters"]
 		if ok && len(keys[0]) >= 1 {

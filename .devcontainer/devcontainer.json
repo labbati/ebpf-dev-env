@@ -30,6 +30,7 @@
 	"customizations": {
 		"vscode": {
 			"extensions": [
+				"golang.go",
 				"ms-python.python",
 				"ms-azuretools.vscode-docker",
 				"ms-vscode.cpptools-extension-pack"
