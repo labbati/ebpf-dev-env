@@ -1,0 +1,60 @@
+{
+    "env": {
+        "myIncludePath": [
+            "${workspaceFolder}/include",
+            "${workspaceFolder}/src"
+        ],
+        "myDefines": [
+            "DEBUG",
+            "MY_FEATURE=1"
+        ]
+    },
+    "configurations": [
+        {
+            "name": "Linux Dev Container",
+            "compilerPath": "/usr/bin/gcc",
+            // "compilerArgs": [
+            //     "-m32"
+            // ],
+            "intelliSenseMode": "linux-gcc-x86",
+            "includePath": [
+                "/usr/include",
+                "/usr/src/linux-headers-6.5.0-35-generic/include/",
+                "/usr/src/linux-headers-6.5.0-35-generic/arch/arm64/include/generated",
+                "/usr/src/linux-hwe-6.5-headers-6.5.0-35/include",
+                "/usr/src/linux-hwe-6.5-headers-6.5.0-35/include/uapi",
+                "/usr/src/linux-hwe-6.5-headers-6.5.0-35/arch/arm/include",
+                "/usr/src/linux-hwe-6.5-headers-6.5.0-35/arch/arm/mach-footbridge/include",
+                "/usr/src/linux-hwe-6.5-headers-6.5.0-35/arch/arm64/include",
+                "${workspaceFolder}/dev-include"
+            ],
+            // "defines": [
+            //     "${myDefines}"
+            // ],
+            // "cStandard": "gnu11",
+            // "cppStandard": "gnu++14",
+            // "configurationProvider": "ms-vscode.cmake-tools",
+            // "forcedInclude": [
+            // ],
+            "mergeConfigurations": true,
+            // "customConfigurationVariables": {
+            //     "myVar": "myvalue"
+            // },
+            "browse": {
+                "path": [
+                    // "${myIncludePath}",
+                    "/usr/include",
+                    "/usr/src/linux-headers-6.5.0-35-generic/include/",
+                    "/usr/src/linux-headers-6.5.0-35-generic/arch/arm64/include/generated",
+                    "/usr/src/linux-hwe-6.5-headers-6.5.0-35/include",
+                    "/usr/src/linux-hwe-6.5-headers-6.5.0-35/arch/arm/include/",
+                    "/usr/src/linux-hwe-6.5-headers-6.5.0-35/arch/arm/mach-footbridge/include"
+                ],
+                "limitSymbolsToIncludedHeaders": true,
+                "databaseFilename": "${workspaceFolder}/.vscode/browse.vc.db"
+            }
+        }
+    ],
+    "version": 4,
+    "enableConfigurationSquiggles": true
+}
