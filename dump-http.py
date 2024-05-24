@@ -20,6 +20,7 @@ from bcc import BPF
 from sys import argv
 
 import socket
+import struct
 import os
 import binascii
 import time
@@ -98,8 +99,8 @@ if len(argv) > 3:
 
 print("binding socket to '%s'" % interface)
 
-# initialize BPF - load source code from http-parse-complete.c
-bpf = BPF(src_file="http-parse-complete.c", debug=0)
+# initialize BPF - load source code from dump-http.c
+bpf = BPF(src_file="dump-http.c", debug=0)
 
 # load eBPF program http_filter of type SOCKET_FILTER into the kernel eBPF vm
 # more info about eBPF program types
@@ -211,8 +212,16 @@ while 1:
 
     # payload_string contains only packet payload
     payload_string = packet_str[(payload_offset):(len(packet_bytearray))]
+
+    # print(payload_string)
     # CR + LF (substring to find)
-    crlf = b'\r\n'
+    crlf = b"\r\n"
+    headers = payload_string.split(crlf + crlf)[0]
+    print('{}, {}'.format(socket.inet_ntoa(struct.pack('!L', ip_src)), socket.inet_ntoa(struct.pack('!L', ip_dst))))
+    print("\n".join([l.decode('"utf-8') for l in headers.split(crlf)]))
+    print('-------------------------------')
+    continue
+
 
     # current_Key contains ip source/dest and port source/map
     # useful for direct bpf_sessions map access

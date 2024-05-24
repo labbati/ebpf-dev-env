@@ -16,7 +16,12 @@ struct Key
 struct Leaf
 {
 	int timestamp; // timestamp in ns
+	int location;  // 0: beginning, 1: headers, 2: payload
 };
+
+const int BEGINNING = 0;
+const int HEADERS = 1;
+const int PAYLOAD = 2;
 
 // BPF_TABLE(map_type, key_type, leaf_type, table_name, num_entry)
 // map <Key, Leaf>
@@ -37,7 +42,6 @@ BPF_HASH(sessions, struct Key, struct Leaf, 1024);
 */
 int http_filter(struct __sk_buff *skb)
 {
-
 	u8 *cursor = 0;
 
 	struct ethernet_t *ethernet = cursor_advance(cursor, sizeof(*ethernet));
@@ -59,7 +63,7 @@ int http_filter(struct __sk_buff *skb)
 	u32 payload_offset = 0;
 	u32 payload_length = 0;
 	struct Key key;
-	struct Leaf zero = {0};
+	struct Leaf zero = {0, BEGINNING};
 
 	// calculate ip header length
 	// value to multiply * 4
@@ -93,11 +97,19 @@ int http_filter(struct __sk_buff *skb)
 	payload_offset = ETH_HLEN + ip_header_length + tcp_header_length;
 	payload_length = ip->tlen - ip_header_length - tcp_header_length;
 
+	struct Leaf *lookup_leaf = sessions.lookup(&key);
+
 	// http://stackoverflow.com/questions/25047905/http-request-minimum-size-in-bytes
 	// minimum length of http request is always geater than 7 bytes
 	// avoid invalid access memory
 	// include empty payload
-	if (payload_length < 7)
+	if (payload_length < 7 && !lookup_leaf)
+	{
+		goto DROP;
+	}
+
+	// We are not interested in the payload
+	if (lookup_leaf && lookup_leaf->location == PAYLOAD)
 	{
 		goto DROP;
 	}
@@ -113,57 +125,77 @@ int http_filter(struct __sk_buff *skb)
 
 	// find a match with an HTTP message
 	// HTTP
-	if ((p[0] == 'H') && (p[1] == 'T') && (p[2] == 'T') && (p[3] == 'P'))
+	if (
+		!lookup_leaf &&
+			((p[0] == 'H') && (p[1] == 'T') && (p[2] == 'T') && (p[3] == 'P')) ||
+		((p[0] == 'G') && (p[1] == 'E') && (p[2] == 'T')) || ((p[0] == 'P') && (p[1] == 'O') && (p[2] == 'S') && (p[3] == 'T')) || ((p[0] == 'P') && (p[1] == 'U') && (p[2] == 'T')) || ((p[0] == 'D') && (p[1] == 'E') && (p[2] == 'L') && (p[3] == 'E') && (p[4] == 'T') && (p[5] == 'E')) || ((p[0] == 'H') && (p[1] == 'E') && (p[2] == 'A') && (p[3] == 'D')))
 	{
-		goto HTTP_MATCH;
-	}
-	// GET
-	if ((p[0] == 'G') && (p[1] == 'E') && (p[2] == 'T'))
-	{
-		goto HTTP_MATCH;
-	}
-	// POST
-	if ((p[0] == 'P') && (p[1] == 'O') && (p[2] == 'S') && (p[3] == 'T'))
-	{
-		goto HTTP_MATCH;
-	}
-	// PUT
-	if ((p[0] == 'P') && (p[1] == 'U') && (p[2] == 'T'))
-	{
-		goto HTTP_MATCH;
-	}
-	// DELETE
-	if ((p[0] == 'D') && (p[1] == 'E') && (p[2] == 'L') && (p[3] == 'E') && (p[4] == 'T') && (p[5] == 'E'))
-	{
-		goto HTTP_MATCH;
-	}
-	// HEAD
-	if ((p[0] == 'H') && (p[1] == 'E') && (p[2] == 'A') && (p[3] == 'D'))
-	{
-		goto HTTP_MATCH;
+		// // let's see if this is all headers or the payloads starts
+		// for (int idx = 0; idx < payload_length - 4; idx++)
+		// {
+		// 	if (p[idx] == 13 && p[idx + 1] == 10 && p[idx + 2] == 13 && p[idx + 3] == 10)
+		// 	{
+		// 		// CRLFCRLF (separation between headers and body)
+		// 	}
+		// }
+		// goto HEADERS_MATCH;
+		zero.location = HEADERS;
+		lookup_leaf = sessions.lookup_or_try_init(&key, &zero);
 	}
 
-	// no HTTP match
-	// check if packet belong to an HTTP session
-	struct Leaf *lookup_leaf = sessions.lookup(&key);
-	if (lookup_leaf)
+	if (!lookup_leaf)
 	{
-		// send packet to userspace
-		goto KEEP;
+		goto DROP;
 	}
-	goto DROP;
+
+	// Here we need to check byte by byte, because we might have mixed headers + payload
+	int minus_0 = 0;
+	int minus_1 = 0;
+	int minus_2 = 0;
+	int minus_3 = 0;
+	for (int idx = 0; idx < payload_length - 4; idx++)
+	{
+		minus_1 = minus_0;
+		minus_2 = minus_1;
+		minus_3 = minus_2;
+		minus_0 = load_byte(skb, payload_offset + i);
+
+		if (minus_3 == 13 && minus_2 == 10 && minus_1 == 13 && minus_0 == 10)
+		{
+			zero.location = PAYLOAD;
+			sessions.update(&key, &zero);
+			break;
+		}
+	}
+
+	goto KEEP;
+
+	// // check if packet belong to an active HTTP session
+
+	// // if (lookup_leaf->location == HEADERS) {}
+
+	// if (lookup_leaf)
+	// {
+	// 	// send packet to userspace
+	// 	goto KEEP;
+	// }
+	// goto DROP;
 
 // keep the packet and send it to userspace returning -1
-HTTP_MATCH:
-	// if not already present, insert into map <Key, Leaf>
-	sessions.lookup_or_try_init(&key, &zero);
+// HEADERS_MATCH:
+// if not already present, insert into map <Key, Leaf>
+// struct Leaf *lookup_leaf = sessions.lookup_or_try_init(&key, &zero);
+// if (lookup_leaf)
+// {
+// 	lookup_leaf->location = HEADERS;
+// }
 
 // send packet to userspace returning -1
 KEEP:
-	// bpf_trace_printk(p);
 	return -1;
 
-// drop the packet returning 0
+// drop the packet returning 0 (the packed is "dropped" in the sense it does not go to userspace, it is like if
+// this ebpf program was not installed)
 DROP:
 	return 0;
 }
